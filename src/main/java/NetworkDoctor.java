@@ -31,7 +31,7 @@ public class NetworkDoctor {
     static byte[] screen = null;
     static boolean shouldBreak = false;
 
-    private static final String ACCESS_KEY = "eyJ4cC51IjoyNTgyODI1LCJ4cC5wIjoyNTgyODIxLCJ4cC5tIjoiTVRVME1qQXdOelkwTnpnMU1BIiwiYWxnIjoiSFMyNTYifQ.eyJleHAiOjE4NTczNjc2NDgsImlzcyI6ImNvbS5leHBlcml0ZXN0In0.ob4AJwWuSaPkDvjI8lUHIrV_wZg4PYFfLIrJ_SuhcF0";
+    private static final String ACCESS_KEY = "";
 
     public static void main(String s[]) {
 
@@ -39,6 +39,14 @@ public class NetworkDoctor {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hhmmss");
         System.setProperty("current.date", dateFormat.format(new Date()));
         properties = SeeTestProperties.getSeeTestProperties();
+
+        if (ACCESS_KEY == null || ACCESS_KEY.length() < 10) {
+            LOGGER.error("Access key must be set. Please set the access key in the "
+                    + NetworkDoctor.class.getSimpleName() + ".java" + " code.");
+            LOGGER.info("To get access get to to https://cloud.seetest.io or learn at " +
+                    "https://docs.seetest.io/display/SEET/Execute+Tests+on+SeeTest+-+Obtaining+Access+Key", ACCESS_KEY);
+            throw new RuntimeException("Access key invalid : accessKey - " + ACCESS_KEY);
+        }
 
         // Proxy
         String httpProxy = properties.getProperty(SeeTestProperties.HTTP_PROXY_HOST);
