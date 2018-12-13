@@ -2,13 +2,10 @@ import java.io.*;
 import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 
 import com.experitest.cloud.v2.AccessKeyCloudAuthentication;
 import com.experitest.cloud.v2.Cloud;
-import com.experitest.cloud.v2.Devices;
 import com.experitest.cloud.v2.ProxyInformation;
 import com.experitest.cloud.v2.pojo.Device;
 import com.experitest.cloud.v2.screen.DeviceConnection;
@@ -16,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.impl.Log4jLoggerFactory;
 import utils.SeeTestProperties;
 
-import static utils.SeeTestProperties.HTTP_PROXY_HOST;
 
 /**
  *
@@ -31,7 +27,7 @@ public class NetworkDoctor {
     static byte[] screen = null;
     static boolean shouldBreak = false;
 
-    private static final String ACCESS_KEY = "";
+    private static final String ACCESS_KEY = "eyJ4cC51IjoyMzQ0NDgxLCJ4cC5wIjoyMzQ0NDgwLCJ4cC5tIjoiTVRVME1UWTVNREV4TlRVM01nIiwiYWxnIjoiSFMyNTYifQ.eyJleHAiOjE4NTcwNTAxMTUsImlzcyI6ImNvbS5leHBlcml0ZXN0In0.k5UuEeuBDLrYy43sclwN0rs8qbC_g4JzKsb-kAFYy14";
 
     public static void main(String s[]) {
 
@@ -39,7 +35,8 @@ public class NetworkDoctor {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hhmmss");
         System.setProperty("current.date", dateFormat.format(new Date()));
         properties = SeeTestProperties.getSeeTestProperties();
-
+        
+        //Verifying access key is provides. Valid user access key is needed to complete the test.
         if (ACCESS_KEY == null || ACCESS_KEY.length() < 10) {
             LOGGER.error("Access key must be set. Please set the access key in the "
                     + NetworkDoctor.class.getSimpleName() + ".java" + " code.");
@@ -48,7 +45,7 @@ public class NetworkDoctor {
             throw new RuntimeException("Access key invalid : accessKey - " + ACCESS_KEY);
         }
 
-        // Proxy
+        // Proxy settings
         String httpProxy = properties.getProperty(SeeTestProperties.HTTP_PROXY_HOST);
         String httpProxyPort = properties.getProperty(SeeTestProperties.HTTP_PROXY_HOST, "80");
         if (httpProxy != null && !httpProxy.isEmpty()) {
@@ -57,9 +54,12 @@ public class NetworkDoctor {
             LOGGER.info("Using Proxy - " + String.format("%s:%s",httpProxy, httpProxyPort));
         }
 
-
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // Verifying we have access to common sites
+        //
+        ////////////////////////////////////////////////////////////////////////////////////////
         String urls = properties.getProperty(SeeTestProperties.URLS,googleUrl);
-
         for (String url : urls.split(",")) {
             if (url.equals(seetestUrl)) {
                 continue;
@@ -68,37 +68,84 @@ public class NetworkDoctor {
             boolean result = pingURL(url, timeOut);
             LOGGER.info("Ping " + url  + " - " + (result ? "successful" : "failed"));
         }
-
+        
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // Verifying we have access to cloud.seetest.io
+        //
+        ////////////////////////////////////////////////////////////////////////////////////////
         LOGGER.info("Pinging " + seetestUrl + " ...");
         boolean result = pingURL(seetestUrl, timeOut);
-        LOGGER.info("Ping " + seetestUrl  + " - " + (result ? "successful" : "failed"));
+        LOGGER.info("----------------------  Ping " + seetestUrl  + " - " + (result ? "successful" : "failed") + "------------------------");
 
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // Verifying we have access to all seetest.io data centers
+        //
+        ////////////////////////////////////////////////////////////////////////////////////////
+        HashMap<String, String> datacentersMap = new HashMap<>();
+        datacentersMap.put("eu-1 CloudIO-DHM1 5003d9", "http://62.90.196.20:8080");
+        datacentersMap.put("eu-1 CloudIO-DHM3 e6facf", "http://62.90.196.21:8080");
+        datacentersMap.put("eu-1 CloudIO-DHM2 782cbf", "http://62.90.196.11:8080");
+        datacentersMap.put("au-1 au-dhm1 fa6eea", "http://125.7.125.30:8080");
+        datacentersMap.put("gr-1 gr-dhm1 40bf8f", "http://137.221.39.141:8080");
+        datacentersMap.put("eu-1 CloudIO-DHM6 af65d2", "http://62.90.196.29:8080");
+        datacentersMap.put("eu-1 CloudIO-DHM4 135947", "http://62.90.196.19:8080");
+        datacentersMap.put("uk-1 uk-dhm1 ecd166", "http://37.203.43.146:8080");
+        datacentersMap.put("eu-1 CloudIO-DHM5 568dae", "http://62.90.196.14:8080");
+        datacentersMap.put("us-1 us1-dhm1 9f76dd", "http://65.49.79.140:8080");
+        datacentersMap.put("eu-1 CloudIO-DHM7 50c4fd", "http://62.90.196.30:8080");
+        datacentersMap.put("ca-1 ca1-dhm1 ad0682", "http://206.198.185.120:8080");
+        datacentersMap.put("us-1 us1-dhm2 f0ace5", "http://65.49.79.141:8080");
+        
+        LOGGER.info("-----------------------------------------  Starting to check datacenters --------------------------------------------------------");
+        for (String name : datacentersMap.keySet()) {
+        	String url = datacentersMap.get(name);
+            result = pingURL(url, timeOut);
+            LOGGER.info(String.format("Ping %s datacenter, address is %s , result is %s", name,url,(result ? "successful" : "failed")));        	
+
+        }        
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // Phase 1 results
+        //
+        ////////////////////////////////////////////////////////////////////////////////////////        
         if (!failUrlMap.isEmpty()) {
+        	LOGGER.info("------------------------------------------- Failure --------------------------------------------------------");
             LOGGER.info("Failed Urls and fail reason ...");
             failUrlMap.entrySet().stream().forEach(entry -> LOGGER.info("Url = " + entry.getKey() + " - Reason: " + entry.getValue()));
-
             if (httpProxy == null || httpProxy.isEmpty()) {
                 LOGGER.error(" \n Try connect using proxy and run again." +
                         "Usage: java -Dhttp.proxyHost=<proxyHost> " +
                         "-Dhttp.proxyPort=<proxyPort> NetworkDoctor \n");
             }
+            LOGGER.info("------------------------------------------------------------------------------------------------------------");
+            System.exit(1);
         } else {
-            LOGGER.info("All the configured urls were connected ...");
+            LOGGER.info("------------------------------------------ All the configured urls were connected ... -------------------------");
         }
 
-        if (!failUrlMap.containsKey(seetestUrl)) {
-            cloudConnect(ACCESS_KEY , httpProxy , httpProxyPort);
-        }
-
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // Verifying account to seetest api, and websocket
+        //
+        ////////////////////////////////////////////////////////////////////////////////////////        
+        cloudConnect(ACCESS_KEY , httpProxy , httpProxyPort);
+        
+        LOGGER.info("------------------------------------------  Network Doctor Completed  -------------------------");
     }
 
+   
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//   UTILITY METHODS
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /**
      * Pings the URL.
-     * @param url
-     * @param timeout
-     * @return
+     * @return true/false
      */
-    public static boolean pingURL(String url, int timeout) {
+    private static boolean pingURL(String url, int timeout) {
 
         try {
             HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
@@ -135,7 +182,7 @@ public class NetworkDoctor {
      * @param proxyHost
      * @param proxyPort
      */
-    public static void cloudConnect(String accessKey, String proxyHost , String proxyPort) {
+    private static void cloudConnect(String accessKey, String proxyHost , String proxyPort) {
         ProxyInformation proxyInfo =  null;
         if (proxyHost != null && !proxyHost.isEmpty()) {
             proxyInfo = new ProxyInformation(proxyHost, Integer.parseInt(proxyPort.equals("") ? "80" : proxyPort)
@@ -204,53 +251,6 @@ public class NetworkDoctor {
         cloud.close();
         LOGGER.info("Device released...");
     }
-    /**
-     * Connecting to cloud and get devices for the user in Json Format.
-     * @param url
-     * @param accessKey
-     * @return
-
-    public static void cloudConnect(String url, String accessKey) {
-
-        BasicHeader[] headers= new BasicHeader[1];
-        headers[0] = new BasicHeader("Authorization", "Bearer " + accessKey);
-        try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
-
-
-            //htttp request creating
-            RequestConfig config = RequestConfig
-                    .custom()
-                    .setConnectTimeout(3000*1000)
-                    .setConnectionRequestTimeout(3000*10000)
-                    .setSocketTimeout(4000*10000)
-                    .build();
-            //producing the real url
-
-            String realUrl =  url + "/api/v1/devices";
-            // producing the put request
-            HttpGet get = new HttpGet(realUrl);
-            get.setConfig(config);
-            get.setHeaders(headers);
-
-
-            HttpResponse responseString = httpClient.execute(get);
-            InputStream stream = responseString.getEntity().getContent();
-            String result = new BufferedReader(new InputStreamReader(stream))
-                    .lines()
-                    .collect(Collectors.joining("\n"));
-
-            LOGGER.info("Devices = " + result);
-
-            cloudWSConnect();
-        }
-        catch (Exception e) {
-            // request fail..
-            System.out.println();
-        }
-        //LOGGER.info("Devices = " + devices.toString());
-    }*/
-
-
 
     /**
      * Gets the trace.
@@ -268,7 +268,7 @@ public class NetworkDoctor {
 
     }
 
-    public static boolean checkScreensEq(byte[] sc1, byte[] sc2) {
+    private static boolean checkScreensEq(byte[] sc1, byte[] sc2) {
         //comparing the new screen by bytes, to see the change made..
         for (int i = 96; i < sc1.length; i++) {
             int compare = Byte.compare(sc1[i], sc2[i]);
