@@ -27,7 +27,7 @@ public class NetworkDoctor {
     static byte[] screen = null;
     static boolean shouldBreak = false;
 
-    private static final String ACCESS_KEY = "eyJ4cC51IjoyMzQ0NDgxLCJ4cC5wIjoyMzQ0NDgwLCJ4cC5tIjoiTVRVME1UWTVNREV4TlRVM01nIiwiYWxnIjoiSFMyNTYifQ.eyJleHAiOjE4NTcwNTAxMTUsImlzcyI6ImNvbS5leHBlcml0ZXN0In0.k5UuEeuBDLrYy43sclwN0rs8qbC_g4JzKsb-kAFYy14";
+    private static final String ACCESS_KEY = "";
 
     public static void main(String s[]) {
 
